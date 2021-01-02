@@ -22,7 +22,7 @@ barplot(brand_freq$mean, main = "Mean of ratings per brand", ylab = "5 point sca
 type_freq <- group_by(processed_data, Style) %>% summarize(mean = mean(Stars))
 barplot(type_freq$mean, names = type_freq$Style, horiz=T, las=1, main = "Mean of ratings per ramen type", xlab = "5 point scale")
 
-# Mean of ratings per country
+# Mean of ratings per country (ramen available in that country)
 country_freq <- group_by(processed_data, Country) %>% summarize(mean = mean(Stars))
-barplot(country_freq$mean, names = country_freq$Country, horiz=T, las=1, space = 1, main = "Mean of ratings per style origin country", xlab = "5 point scale")
+barplot(country_freq$mean, names = country_freq$Country, horiz=T, las=1, space = 1, main = "Mean of ratings per country", xlab = "5 point scale")
 

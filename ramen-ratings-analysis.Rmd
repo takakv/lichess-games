@@ -1,0 +1,54 @@
+---
+title: "Ramen ratings analysis"
+output: html_notebook
+---
+```{r}
+ramen_ratings <- read.csv("ramen-ratings.csv")
+```
+
+# About the dataset
+
+The chosen dataset exposes the ratings of different types of Ramen from various brands in multiple countries. More specifically, it provides the following relevant information:
+
+- Brand : from which brand that specific ramen is from
+- Style : the type of ramen / its serving form (cup, pack, bowl, ...)
+- Country : the country where a certain rating came from
+- Stars : rating given to the ramen on a five point scale
+
+There are a few more columns that require different handling
+
+- Review number : index of a review which does not provide relevant information for our statistical analysis
+- Variety : string containing a description of the type (contents) of ramen, which requires additional processing such as keyword extraction to be practical in our analysis
+- Top ten : the year a certain ramen made it to the top ten, along with its position in the ranking
+
+## Initial analysis
+
+To make the data-set more approachable, I conducted some visualisations to better understand the type and layout of the data I am working with. For this however, I first needed to convert the ratings into numbers (float types), as by default they are of string type. Then I proceeded to remove rows with a missing rating to prevent erroneous data in future manipulations/calculations.
+
+```{r}
+library(dplyr)
+processed_data <- ramen_ratings[, c(2,4,5,6)]
+processed_data$Stars <- as.numeric(processed_data$Stars)
+processed_data <- na.omit(processed_data)
+```
+
+### Visualising the number of ratings
+
+```{r}
+rating_freq <- table(processed_data$Stars)
+barplot(rating_freq, las=2, main="Frequencies of discrete ratings", ylab="Count", cex.names=.7)
+```
+
+By taking brackets: [0,1[, [1, 2[, ...
+
+```{r}
+rating_freq_ranges <- table(floor(processed_data$Stars))
+barplot(rating_freq_ranges, names=c("0-0.9", "1-1.9", "2-2.9", "3-3.9", "4-4.9", "5"), main="Frequencies of ratings by brackets", ylab="Count")
+```
+
+
+```{r}
+options(dplyr.summarise.inform = FALSE)
+country_freq <- group_by(processed_data, Country) %>% summarise(Count=n()) %>% arrange(desc(Count))
+barplot(country_freq$Count, names=country_freq$Country, las=2, main="Number of ratings per country", ylab="Count", cex.names=.8)
+```
