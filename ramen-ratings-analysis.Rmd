@@ -74,27 +74,31 @@ trimean <- function(x) {
   (q1 + 2 * q2 + q3) / 4
 }
 
-ratings_overview <- processed_data %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
+gm_mean = function(x){
+  exp(sum(log(x[x > 0])) / length(x))
+}
+
+ratings_overview <- processed_data %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
 formattable(ratings_overview)
 ```
 
 ### Ramen ratings per brand
 
 ```{r}
-brands_overview <- group_by(processed_data, Brand) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
+brands_overview <- group_by(processed_data, Brand) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
 formattable(brands_overview)
 ```
 
 ### Ramen ratings per style
 
 ```{r}
-style_overview <- group_by(processed_data, Style) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
+style_overview <- group_by(processed_data, Style) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
 formattable(style_overview)
 ```
 
 ### Ramen ratings per country
 
 ```{r}
-country_overview <- group_by(processed_data, Country) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
+country_overview <- group_by(processed_data, Country) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
 formattable(country_overview)
 ```
