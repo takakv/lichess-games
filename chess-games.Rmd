@@ -1,0 +1,157 @@
+---
+title: "Chess games analysis"
+output: html_notebook
+---
+
+# About the dataset
+
+The chosen dataset exposes the ratings of different types of Ramen from various brands in multiple countries. More specifically, it provides the following relevant information:
+
+- Brand : from which brand that specific ramen is from
+- Style : the type of ramen / its serving form (cup, pack, bowl, ...)
+- Country : the country where a certain rating came from
+- Stars : rating given to the ramen on a five point scale
+
+There are a few more columns that require different handling
+
+- Review number : index of a review which does not provide relevant information for our statistical analysis
+- Variety : string containing a description of the type (contents) of ramen, which requires additional processing such as keyword extraction to be practical in our analysis
+- Top ten : the year a certain ramen made it to the top ten, along with its position in the ranking
+
+## Initial analysis - data visualisation
+
+To make the data-set more approachable, I conducted some visualisations to better understand the type and layout of the data I am working with. For this however, I first needed to convert the ratings into numbers (float types), as by default they are of string type. Then I proceeded to remove rows with a missing rating to prevent erroneous data in future manipulations/calculations.
+
+```{r include=FALSE}
+library(ggplot2)
+library(ggcorrplot)
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+games <- read.csv("games.csv")
+```
+
+### Visualising the number of turns
+
+```{r}
+ggplot(games, aes(x=turns)) + geom_histogram(binwidth=15, fill="#ff6361", color="black") + ggtitle("Game turns count")
+```
+It seems that there are more higher ratings than lower ratings, however to better visualise this, let's view the ratings in histogram form.
+
+```{r}
+ratings <- processed_data$Stars
+hist(ratings, breaks=10, main="Ramen ratings", xlab="5 point scale ratings", col="#ff6361", freq=F)
+curve(dnorm(x, mean=mean(ratings), sd=sqrt(var(ratings))), add=T, col="black", lwd=2)
+```
+We can now confirm that the data is skewed towards higher ratings, so this is something we have to keep in mind when extrapolating in the future.
+
+#### Countries
+
+```{r}
+options(dplyr.summarise.inform = FALSE)
+country_freq <- group_by(processed_data, Country) %>% summarise(Count=n()) %>% arrange(desc(Count))
+barplot(country_freq$Count, names=country_freq$Country, las=2, main="Number of ratings per country", ylab="Count", cex.names=.8)
+barplot(country_freq$Count[0:5], names=country_freq$Country[0:5], main="Countries with most ratings", ylab="Count", col=brewer.pal(n=5, name="Blues"))
+```
+
+We can suppose that the countries with most ratings are the countries with the biggest ramen markets. While the rating metric only shows which countries the most ratings have come from, we can correlate interest in rating with interest in ramen, and possibly consumption. It makes sense for the largest markets to be Asian, but also for the USA to be included, as it has a large population and a diverse and extensive culinary range.
+
+#### Common types
+
+```{r}
+options(dplyr.summarise.inform = FALSE)
+type_freq <- group_by(processed_data, Style) %>% summarise(Count=n()) %>% arrange(desc(Count))
+barplot(type_freq$Count, names=type_freq$Style, main="Ramen types", ylab="Count", cex.names=.8)
+```
+
+We can see that the most popular type of ramen by a wide margin is pack ramen, which shouldn't come as a surprise considering the convenience and popularity of "instant ramen". Bowl and cup types follow, which is are also quite predictable for seasoned ramen enthusiasts.
+
+#### Common brands
+
+```{r}
+options(dplyr.summarise.inform = FALSE)
+brand_freq <- group_by(processed_data, Brand) %>% summarise(Count=n()) %>% arrange(desc(Count))
+barplot(brand_freq$Count[0:5], names=brand_freq$Brand[0:5], main="Biggest brands", ylab="Count")
+```
+
+The ramen brand dominating the market is Nissin, with almost no direct competition. A few other brands are also sizeable, but not as popular and thus most likely not as widespread as Nissin is. Many ramen brands only have a single product. This of course doesn't mean that the company has only produced a single type of ramen, but only a single one has been rated, which suggest that these brands are minor players, even if they have more varieties.
+
+
+## Quantitative overview
+
+We can now more closely examine the ratings of ramen as they are grouped by brand, type and country. This helps us understand both overall and localised reception of ramen.
+
+Helper functions:
+
+```{r}
+mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+trimean <- function(x) {
+  quartiles <- quantile(x, prob=c(.25,.5,.75))
+  q1 <- quartiles[1]
+  q2 <- quartiles[2]
+  q3 <- quartiles[3]
+  (q1 + 2 * q2 + q3) / 4
+}
+
+gm_mean = function(x) {
+  exp(sum(log(x[x > 0])) / length(x))
+}
+
+rel_range = function(x) {
+  max(x) - min(x)
+}
+
+iqr = function(x) {
+  quartiles <- quantile(x, prob=c(.25,.5,.75))
+  quartiles[3] - quartiles[1]
+}
+```
+
+### General rating analysis
+
+```{r warning=FALSE}
+ratings_overview <- processed_data %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2), Range = rel_range(Stars), IQR = iqr(Stars), Variance = var(Stars), "Standard deviation" = sd(Stars))
+ratings_overview <- ratings_overview %>% gather("Measure", "Value")
+formattable(ratings_overview)
+```
+
+### Ramen ratings per brand
+
+```{r}
+brands_overview <- group_by(processed_data, Brand) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
+formattable(brands_overview)
+```
+
+### Ramen ratings per style
+
+```{r}
+style_overview <- group_by(processed_data, Style) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
+formattable(style_overview)
+```
+
+### Ramen ratings per country
+
+```{r}
+country_overview <- group_by(processed_data, Country) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
+formattable(country_overview)
+```
+
+
+```{r}
+char2num<-function(x) { 
+  groups = unique(x) 
+  as.numeric(factor(x, levels=groups)) 
+}
+
+matrix_data <- subset(games, select = c(turns, white_rating, black_rating, opening_eco, winner, victory_status, increment_code, opening_ply))
+matrix_data$opening_eco <- char2num(matrix_data$opening_eco)
+matrix_data$winner <- char2num(matrix_data$winner)
+matrix_data$victory_status <- char2num(matrix_data$victory_status)
+matrix_data$increment_code <- char2num(matrix_data$increment_code)
+corr <- cor(matrix_data)
+ggcorrplot(corr, lab = TRUE)
+```
