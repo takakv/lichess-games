@@ -27,6 +27,8 @@ To make the data-set more approachable, I conducted some visualisations to bette
 
 ```{r}
 library(dplyr)
+install.packages("formattable")
+library(formattable)
 processed_data <- ramen_ratings[, c(2,4,5,6)]
 processed_data$Stars <- as.numeric(processed_data$Stars)
 processed_data <- na.omit(processed_data)
@@ -38,17 +40,61 @@ processed_data <- na.omit(processed_data)
 rating_freq <- table(processed_data$Stars)
 barplot(rating_freq, las=2, main="Frequencies of discrete ratings", ylab="Count", cex.names=.7)
 ```
-
-By taking brackets: [0,1[, [1, 2[, ...
+It seems that there are more higher ratings than lower ratings, however to better visualise this, let's take rating brackets: [0,1[, [1, 2[, ...
 
 ```{r}
 rating_freq_ranges <- table(floor(processed_data$Stars))
 barplot(rating_freq_ranges, names=c("0-0.9", "1-1.9", "2-2.9", "3-3.9", "4-4.9", "5"), main="Frequencies of ratings by brackets", ylab="Count")
 ```
-
+We can now confirm that the data is skewed towards higher ratings, so this is something we have to keep in mind when extrapolating in the future.
 
 ```{r}
 options(dplyr.summarise.inform = FALSE)
 country_freq <- group_by(processed_data, Country) %>% summarise(Count=n()) %>% arrange(desc(Count))
 barplot(country_freq$Count, names=country_freq$Country, las=2, main="Number of ratings per country", ylab="Count", cex.names=.8)
+```
+
+## Quantitative overview
+
+We can now more closely examine the ratings of ramen as they are grouped by brand, type and country. This helps us understand both overall and localised reception of ramen.
+
+### General rating analysis
+
+```{r}
+mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+trimean <- function(x) {
+  quartiles <- quantile(x, prob=c(.25,.5,.75))
+  q1 <- quartiles[1]
+  q2 <- quartiles[2]
+  q3 <- quartiles[3]
+  (q1 + 2 * q2 + q3) / 4
+}
+
+ratings_overview <- processed_data %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars))
+formattable(ratings_overview)
+```
+
+### Ramen ratings per brand
+
+```{r}
+brands_overview <- group_by(processed_data, Brand) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars))
+formattable(brands_overview)
+```
+
+### Ramen ratings per style
+
+```{r}
+style_overview <- group_by(processed_data, Style) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars))
+formattable(style_overview)
+```
+
+### Ramen ratings per country
+
+```{r}
+country_overview <- group_by(processed_data, Country) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars))
+formattable(country_overview)
 ```
