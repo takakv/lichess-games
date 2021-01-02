@@ -26,6 +26,7 @@ There are a few more columns that require different handling
 To make the data-set more approachable, I conducted some visualisations to better understand the type and layout of the data I am working with. For this however, I first needed to convert the ratings into numbers (float types), as by default they are of string type. Then I proceeded to remove rows with a missing rating to prevent erroneous data in future manipulations/calculations.
 
 ```{r}
+library(tidyr)
 library(dplyr)
 install.packages("formattable")
 library(formattable)
@@ -58,7 +59,7 @@ barplot(country_freq$Count, names=country_freq$Country, las=2, main="Number of r
 
 We can now more closely examine the ratings of ramen as they are grouped by brand, type and country. This helps us understand both overall and localised reception of ramen.
 
-### General rating analysis
+Helper functions:
 
 ```{r}
 mode <- function(x) {
@@ -77,8 +78,13 @@ trimean <- function(x) {
 gm_mean = function(x){
   exp(sum(log(x[x > 0])) / length(x))
 }
+```
 
+### General rating analysis
+
+```{r warning=FALSE}
 ratings_overview <- processed_data %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
+ratings_overview <- ratings_overview %>% gather("Measure", "Value")
 formattable(ratings_overview)
 ```
 
