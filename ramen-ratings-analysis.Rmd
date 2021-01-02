@@ -25,7 +25,7 @@ There are a few more columns that require different handling
 
 To make the data-set more approachable, I conducted some visualisations to better understand the type and layout of the data I am working with. For this however, I first needed to convert the ratings into numbers (float types), as by default they are of string type. Then I proceeded to remove rows with a missing rating to prevent erroneous data in future manipulations/calculations.
 
-```{r}
+```{r include=FALSE}
 library(tidyr)
 library(dplyr)
 install.packages("formattable")
@@ -75,15 +75,24 @@ trimean <- function(x) {
   (q1 + 2 * q2 + q3) / 4
 }
 
-gm_mean = function(x){
+gm_mean = function(x) {
   exp(sum(log(x[x > 0])) / length(x))
+}
+
+rel_range = function(x) {
+  max(x) - min(x)
+}
+
+iqr = function(x) {
+  quartiles <- quantile(x, prob=c(.25,.5,.75))
+  quartiles[3] - quartiles[1]
 }
 ```
 
 ### General rating analysis
 
 ```{r warning=FALSE}
-ratings_overview <- processed_data %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
+ratings_overview <- processed_data %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2), Range = rel_range(Stars), IQR = iqr(Stars), Variance = var(Stars), "Standard deviation" = sd(Stars))
 ratings_overview <- ratings_overview %>% gather("Measure", "Value")
 formattable(ratings_overview)
 ```
