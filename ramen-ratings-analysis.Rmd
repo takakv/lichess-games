@@ -29,10 +29,13 @@ To make the data-set more approachable, I conducted some visualisations to bette
 library(tidyr)
 library(dplyr)
 install.packages("formattable")
+install.packages("RColorBrewer")
 library(formattable)
+library(RColorBrewer)
 processed_data <- ramen_ratings[, c(2,4,5,6)]
 processed_data$Stars <- as.numeric(processed_data$Stars)
 processed_data <- na.omit(processed_data)
+processed_data[processed_data == ""] <- "Not Applicable"
 ```
 
 ### Visualising the number of ratings
@@ -41,19 +44,46 @@ processed_data <- na.omit(processed_data)
 rating_freq <- table(processed_data$Stars)
 barplot(rating_freq, las=2, main="Frequencies of discrete ratings", ylab="Count", cex.names=.7)
 ```
-It seems that there are more higher ratings than lower ratings, however to better visualise this, let's take rating brackets: [0,1[, [1, 2[, ...
+It seems that there are more higher ratings than lower ratings, however to better visualise this, let's view the ratings in histogram form.
 
 ```{r}
-rating_freq_ranges <- table(floor(processed_data$Stars))
-barplot(rating_freq_ranges, names=c("0-0.9", "1-1.9", "2-2.9", "3-3.9", "4-4.9", "5"), main="Frequencies of ratings by brackets", ylab="Count")
+ratings <- processed_data$Stars
+hist(ratings, breaks=10, main="Ramen ratings", xlab="5 point scale ratings", col="#ff6361", freq=F)
+curve(dnorm(x, mean=mean(ratings), sd=sqrt(var(ratings))), add=T, col="black", lwd=2)
 ```
 We can now confirm that the data is skewed towards higher ratings, so this is something we have to keep in mind when extrapolating in the future.
+
+#### Countries
 
 ```{r}
 options(dplyr.summarise.inform = FALSE)
 country_freq <- group_by(processed_data, Country) %>% summarise(Count=n()) %>% arrange(desc(Count))
 barplot(country_freq$Count, names=country_freq$Country, las=2, main="Number of ratings per country", ylab="Count", cex.names=.8)
+barplot(country_freq$Count[0:5], names=country_freq$Country[0:5], main="Countries with most ratings", ylab="Count")
 ```
+
+We can suppose that the countries with most ratings are the countries with the biggest ramen markets. While the rating metric only shows which countries the most ratings have come from, we can correlate interest in rating with interest in ramen, and possibly consumption. It makes sense for the largest markets to be Asian, but also for the USA to be included, as it has a large population and a diverse and extensive culinary range.
+
+#### Common types
+
+```{r}
+options(dplyr.summarise.inform = FALSE)
+type_freq <- group_by(processed_data, Style) %>% summarise(Count=n()) %>% arrange(desc(Count))
+barplot(type_freq$Count, names=type_freq$Style, main="Ramen types", ylab="Count", cex.names=.8)
+```
+
+We can see that the most popular type of ramen by a wide margin is pack ramen, which shouldn't come as a surprise considering the convenience and popularity of "instant ramen". Bowl and cup types follow, which is are also quite predictable for seasoned ramen enthusiasts.
+
+#### Common brands
+
+```{r}
+options(dplyr.summarise.inform = FALSE)
+brand_freq <- group_by(processed_data, Brand) %>% summarise(Count=n()) %>% arrange(desc(Count))
+barplot(brand_freq$Count[0:5], names=brand_freq$Brand[0:5], main="Biggest brands", ylab="Count")
+```
+
+The ramen brand dominating the market is Nissin, with almost no direct competition. A few other brands are also sizeable, but not as popular and thus most likely not as widespread as Nissin is. Many ramen brands only have a single product. This of course doesn't mean that the company has only produced a single type of ramen, but only a single one has been rated, which suggest that these brands are minor players, even if they have more varieties.
+
 
 ## Quantitative overview
 
