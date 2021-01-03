@@ -5,14 +5,19 @@ output: html_notebook
 
 # About the dataset
 
-The chosen dataset exposes the ratings of different types of Ramen from various brands in multiple countries. More specifically, it provides the following relevant information:
+The chosen dataset concerns over 20 000 games taken from the popular online chess website Lichess.org. It contains both qualitative and quantitative data and lends itself to many forms of analysis and study.
 
-- Brand : from which brand that specific ramen is from
-- Style : the type of ramen / its serving form (cup, pack, bowl, ...)
-- Country : the country where a certain rating came from
-- Stars : rating given to the ramen on a five point scale
+The following variables are of use to me:
 
-There are a few more columns that require different handling
+- Turns: the number of turns (double the number of moves) it took for the game to end, a quantitative variable (continuous integers)
+- Victory status: the type of event that concluded the match, a qualitative variable
+- Winner: the colour of the winning party, a qualitative variable
+- Increment code: type of game-time incrementation used, a qualitative variable
+- White/Black rating: Lichess (Glicko-2) rating based on user's ranked game history, a quantitative variable (continuous integers)
+- Opening eco: the chess opening code for a given opening, a qualitative variable
+- Opening ply: the number of moves in the opening phase, a quantitative variable (continuous integers)
+
+There are a few more variables that I have chosen to ignore, for the following reasons:
 
 - Review number : index of a review which does not provide relevant information for our statistical analysis
 - Variety : string containing a description of the type (contents) of ramen, which requires additional processing such as keyword extraction to be practical in our analysis
@@ -36,14 +41,26 @@ games <- read.csv("games.csv")
 ```{r}
 ggplot(games, aes(x=turns)) + geom_histogram(binwidth=15, fill="#ff6361", color="black") + ggtitle("Game turns count")
 ```
-It seems that there are more higher ratings than lower ratings, however to better visualise this, let's view the ratings in histogram form.
+### Visualising the ratings
+
+As the most optimal opponent range has a rating of +/- 100 to 150, I have chosen a bin size of 100 for the ratings histogram. 
 
 ```{r}
-ratings <- processed_data$Stars
-hist(ratings, breaks=10, main="Ramen ratings", xlab="5 point scale ratings", col="#ff6361", freq=F)
-curve(dnorm(x, mean=mean(ratings), sd=sqrt(var(ratings))), add=T, col="black", lwd=2)
+ggplot(games, aes(x=white_rating)) + geom_histogram(binwidth=100, fill="skyblue1", color="black") + ggtitle("White rating") + xlab("Ratings") + ylab("Number of players")
+ggplot(games, aes(x=black_rating)) + geom_histogram(binwidth=100, fill="indianred1", color="black") + ggtitle("Black rating") + xlab("Ratings") + ylab("Number of players")
 ```
-We can now confirm that the data is skewed towards higher ratings, so this is something we have to keep in mind when extrapolating in the future.
+
+When a user first registers on Lichess, their rating starts at 1500 (+/- 700). The 1500 represents their rating and the 700 represents the confidence interval. This is because an average club player is rated 1500, which is around the 50th percentile for every variant and time control in chess.
+
+It is thus unsurprising that both white and black ratings peak at around 1500. The ratings seem to be slightly right-skewed, which also makes sense, as usually the higher rated a player is, the more invested they are in the game. This in turns means that they play more and are thus more likely to be playing ranked games on Lichess.
+
+#### Comparing the ratings
+
+```{r}
+ggplot(games) + geom_histogram(aes(x=white_rating), binwidth=100, fill="skyblue1", color="black", alpha=0.6) + geom_histogram(aes(x=black_rating), binwidth=100, fill="indianred1", color="black", alpha=0.6) + ggtitle("Comparing ratings") + xlab("Ratings") + ylab("Number of players")
+```
+
+We can see that the ratings for both white and black are mostly overlapping. This does not come as a surprise as a player should be able to play both as white and as black, and therefore would have comparable ratings for both of those colours. Interestingly enough, it would seem that there are slightly higher ratings for white, as the level of game increases, while black ratings seem to have a minimal edge for lower ranked players. 
 
 #### Countries
 
@@ -147,11 +164,13 @@ char2num<-function(x) {
   as.numeric(factor(x, levels=groups)) 
 }
 
-matrix_data <- subset(games, select = c(turns, white_rating, black_rating, opening_eco, winner, victory_status, increment_code, opening_ply))
+matrix_data <- subset(games, select = c(turns, white_rating, black_rating, opening_eco, winner, victory_status, increment_code, opening_ply, white_id, black_id))
 matrix_data$opening_eco <- char2num(matrix_data$opening_eco)
 matrix_data$winner <- char2num(matrix_data$winner)
 matrix_data$victory_status <- char2num(matrix_data$victory_status)
 matrix_data$increment_code <- char2num(matrix_data$increment_code)
+matrix_data$white_id <- char2num(matrix_data$white_id)
+matrix_data$black_id <- char2num(matrix_data$black_id)
 corr <- cor(matrix_data)
 ggcorrplot(corr, lab = TRUE)
 ```
