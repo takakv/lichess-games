@@ -35,24 +35,28 @@ library(ggcorrplot)
 library(tidyverse) # various tools
 library(tidyr)
 library(dplyr)
+library(reshape2)
 library(formattable) # tables
 library(RColorBrewer) # gradients
 library(caret) # required for test and training set
 games <- read.csv("games.csv")
 ```
 
-### Visualising the number of turns
+### Visualising the amount of turns
 
 ```{r}
-ggplot(games, aes(x=turns)) + geom_histogram(binwidth=15, fill="#ff6361", color="black") + ggtitle("Game turns count")
+ggplot(games, aes(turns)) + geom_histogram(aes(y=..density..), binwidth=15, fill="salmon1", color="black") + ggtitle("Distribution of turn counts") + xlab("Turn count") + ylab("Density of games") + geom_density(color="salmon4", alpha=.5, size=1)
 ```
+
+The game turns histogram looks ordinary. It is right-skewed (positive skew) and the average turn count seems to be around 50. In fact, this somewhat corresponds to data by [chessstats](https://www.chessgames.com/chessstats.html), which states that average number of moves per game is about 41, although it is still quite a bit higher.
+
 ### Visualising the ratings
 
 As the most optimal opponent range has a rating of +/- 100 to 150, I have chosen a bin size of 100 for the ratings histogram. 
 
 ```{r}
-ggplot(games, aes(x=white_rating)) + geom_histogram(binwidth=100, fill="skyblue1", color="black") + ggtitle("White rating") + xlab("Ratings") + ylab("Number of players")
-ggplot(games, aes(x=black_rating)) + geom_histogram(binwidth=100, fill="indianred1", color="black") + ggtitle("Black rating") + xlab("Ratings") + ylab("Number of players")
+ggplot(games, aes(x=white_rating)) + geom_histogram(aes(y=..density..), binwidth=100, fill="skyblue1", color="black") + ggtitle("White rating density") + xlab("Rating") + ylab("Density of players") + geom_density(color="royalblue4", alpha=.5, size=1)
+ggplot(games, aes(x=black_rating)) + geom_histogram(aes(y=..density..), binwidth=100, fill="indianred1", color="black") + ggtitle("Black rating density") + xlab("Rating") + ylab("Density of players") + geom_density(color="firebrick4", alpha=.5, size=1)
 ```
 
 When a user first registers on Lichess, their rating starts at 1500 (+/- 700). The 1500 represents their rating and the 700 represents the confidence interval. This is because an average club player is rated 1500, which is around the 50th percentile for every variant and time control in chess.
@@ -83,13 +87,31 @@ I am however surprised to see that there aren't more draws, but this may be due 
 
 ```{r}
 options(dplyr.summarise.inform=F)
-victory_status <-group_by(games, victory_status) %>% summarise(Count=n()) %>% arrange(desc(Count))
+victory_status <- group_by(games, victory_status) %>% summarise(Count=n()) %>% arrange(desc(Count))
 ggplot(victory_status, aes(x="", y=Count, fill=victory_status)) + geom_bar(stat="identity", width=1, color="black") + coord_polar("y", start=0) + theme_void() + ggtitle("Game end status") + theme(legend.title=element_blank()) + scale_fill_manual(values=c("skyblue1", "indianred1", "grey91", "lightsalmon1"))
 ```
 
 We can see that in most cases, the game ended by resign. This is unsurprising as in chess, especially in higher levels, a player will often resign when they see that their position is irrecoverable.
 
-It is worthy to note that games that ended due to lack of time most likely also encompass games where one player abandoned the game. Such games then ended when the timer reached 0. The basis for my reasoning is that in longer time controls, losing due to time running out is not so likely, especially if we consider the relative size to game ends by draw.
+It is worthy to note that games that ended due to lack of time most likely also encompass games where one player abandoned the game without resigning. Such games then ended when the timer reached 0. The basis for my reasoning is that in longer time controls, losing due to time running out is not so likely, especially if we consider the relative size to game ends by draw.
+
+However, we could get a clearer idea of the game end statuses if we pair them with the average number of turns made in the game.
+
+```{r}
+options(dplyr.summarise.inform=F)
+victory_status_avg <- group_by(games, victory_status) %>% summarise(Mean=mean(turns)) %>% arrange(desc(Mean))
+ggplot(victory_status_avg, aes(x="", y=Mean, fill=victory_status)) + geom_bar(stat="identity", width=1, color="black") + coord_polar("y", start=0) + theme_void() + ggtitle("Game end status by average number of turns") + theme(legend.title=element_blank()) + scale_fill_manual(values=c("skyblue1", "indianred1", "grey91", "lightsalmon1"))
+```
+
+It would seem that as games drag out, draws become more common. This could be due to player-agreed draw, or automatic draw such as [threefold repetition](https://en.wikipedia.org/wiki/Threefold_repetition). It would also seem that losing due to time becomes also far more common, thus refuting my previous proposition that players abandoned the game but didn't resign.
+
+#### Visualising openings
+
+```{r}
+black_wins <- subset(games, winner=="black") %>% group_by(opening_eco) %>% summarise(Count=n()) %>% arrange(desc(Count))
+white_wins <- subset(games, winner=="white") %>% group_by(opening_eco) %>% summarise(Count=n())
+```
+
 
 ## Quantitative overview
 
@@ -229,5 +251,8 @@ sample <- createDataPartition(games$white_rating, p=.8, list=F)
 training <- games[sample,]
 testing <- games[-sample,]
 
+memory.size()
+memory.limit()
+memory.limit(size=16000)
 lm1 <- train(white_rating~., data=training, method = "lm")
 ```
