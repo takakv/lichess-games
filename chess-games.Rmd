@@ -5,7 +5,7 @@ output: html_notebook
 
 # About the dataset
 
-The chosen dataset concerns over 20 000 games taken from the popular online chess website Lichess.org. It contains both qualitative and quantitative data and lends itself to many forms of analysis and study.
+The chosen dataset concerns over 20 000 games played on the popular online chess website [Lichess](https://lichess.org). It contains both qualitative and quantitative data and lends itself to many forms of analysis and study. The dataset itself comes from [kaggle](https://www.kaggle.com/datasnaek/chess).
 
 The following variables are of use to me:
 
@@ -13,19 +13,21 @@ The following variables are of use to me:
 - Victory status: the type of event that concluded the match, a qualitative variable
 - Winner: the colour of the winning party, a qualitative variable
 - Increment code: type of game-time incrementation used, a qualitative variable
-- White/Black rating: Lichess (Glicko-2) rating based on user's ranked game history, a quantitative variable (continuous integers)
+- White/Black rating: Lichess ([Glicko-2](https://www.glicko.net/glicko/glicko2.pdf)) rating based on user's ranked game history, a quantitative variable (continuous integers)
 - Opening eco: the chess opening code for a given opening, a qualitative variable
 - Opening ply: the number of moves in the opening phase, a quantitative variable (continuous integers)
 
-There are a few more variables that I have chosen to ignore, for the following reasons:
+There are a few more variables that I have chosen to ignore:
 
-- Review number : index of a review which does not provide relevant information for our statistical analysis
-- Variety : string containing a description of the type (contents) of ramen, which requires additional processing such as keyword extraction to be practical in our analysis
-- Top ten : the year a certain ramen made it to the top ten, along with its position in the ranking
+- ID: game id in the Lichess games system/database
+- Rated: boolean value describing whether the game had an impact on player rating or not
+- Created/last move at: times at which a game started and when the last move was made before the game ended
+- Moves: list of moves made during the game in standard chess notation, processing them could be interesting for those studying the games or players themselves
+- Opening name: as I already have the more general opening code, opening names will just introduce more unique variables when factoring in variations of openings, which is harder to work with
 
 ## Initial analysis - data visualisation
 
-To make the data-set more approachable, I conducted some visualisations to better understand the type and layout of the data I am working with. For this however, I first needed to convert the ratings into numbers (float types), as by default they are of string type. Then I proceeded to remove rows with a missing rating to prevent erroneous data in future manipulations/calculations.
+To make the data-set more approachable, I conducted some visualisations to better understand the type and layout of the data I am working with. Initial visualisations can help give us clues about how to process the data later on, or what calls for further and more detailed analysis.
 
 ```{r include=FALSE}
 library(ggplot2)
@@ -34,6 +36,7 @@ library(tidyverse)
 library(tidyr)
 library(dplyr)
 library(formattable)
+library(RColorBrewer)
 games <- read.csv("games.csv")
 ```
 
@@ -61,7 +64,31 @@ It is thus unsurprising that both white and black ratings peak at around 1500. T
 ggplot(games) + geom_histogram(aes(x=white_rating), binwidth=100, fill="skyblue1", color="black", alpha=0.6) + geom_histogram(aes(x=black_rating), binwidth=100, fill="indianred1", color="black", alpha=0.6) + ggtitle("Comparing ratings") + xlab("Ratings") + ylab("Number of players")
 ```
 
-We can see that the ratings for both white and black are mostly overlapping. This does not come as a surprise as a player should be able to play both as white and as black, and therefore would have comparable ratings for both of those colours. Interestingly enough, it would seem that there are slightly higher ratings for white, as the level of game increases, while black ratings seem to have a minimal edge for lower ranked players. 
+We can see that the ratings for both white and black are mostly overlapping. This does not come as a surprise as a player should be able to play both as white and as black, and therefore would have comparable ratings for both of those colours. Interestingly enough, it would seem that there are slightly higher ratings for white, as the level of game increases, while black ratings seem to have a minimal edge for lower ranked players.
+
+### Visualising game outcomes
+
+```{r}
+options(dplyr.summarise.inform=F)
+win_counts <-group_by(games, winner) %>% summarise(Count=n()) %>% arrange(desc(Count))
+ggplot(win_counts, aes(x="", y=Count, fill=winner)) + geom_bar(stat="identity", width=1, color="black") + coord_polar("y", start=0) + theme_void() + ggtitle("Game outcome") + theme(legend.title=element_blank()) + scale_fill_manual(values=c("grey21", "grey61", "grey91"))
+```
+
+The fact that white has a slightly higher probability to win a game is known as the [first move advantage](https://en.wikipedia.org/wiki/First-move_advantage_in_chess) and is most common for lower ranked players, where that advantage is harder to make up for with the lack of theoretical knowledge and experience.
+
+I am however surprised to see that there aren't more draws, but this may be due to the fact that lower level players have less of a apacity to evaluate a board and conclude a draw.
+
+#### Visualising game ending reasons
+
+```{r}
+options(dplyr.summarise.inform=F)
+victory_status <-group_by(games, victory_status) %>% summarise(Count=n()) %>% arrange(desc(Count))
+ggplot(victory_status, aes(x="", y=Count, fill=victory_status)) + geom_bar(stat="identity", width=1, color="black") + coord_polar("y", start=0) + theme_void() + ggtitle("Game end status") + theme(legend.title=element_blank()) + scale_fill_manual(values=c("skyblue1", "indianred1", "grey91", "lightsalmon1"))
+```
+
+We can see that in most cases, the game ended by resign. This is unsurprising as in chess, especially in higher levels, a player will often resign when they see that their position is irrecoverable.
+
+It is worthy to note that games that ended due to lack of time most likely also encompass games where one player abandoned the game. Such games then ended when the timer reached 0. The basis for my reasoning is that in longer time controls, losing due to time running out is not so likely, especially if we consider the relative size to game ends by draw.
 
 ## Quantitative overview
 
@@ -131,6 +158,10 @@ formattable(ply_overview)
 
 ## Examining relationships
 
+From what we saw from the initial visualisation stage, we can assume that white and black ratings are somewhat related to each other. Furthermore, it seems logical that the opening and the number of moves in the opening phase would have at least minor correlations due to the length, popularity and variation count factors of openings. Finally we can also suppose that the qualitative id's for white and black have some form of relationship as we can expect players to replay each-other a number of times.
+
+It would be interesting to see if players of certain ratings have a preference for the games' time control, and if the opening favors a side in winning (consistency with opening book theory).
+
 ### Correlation matrices
 
 ```{r}
@@ -139,13 +170,27 @@ char2num<-function(x) {
   as.numeric(factor(x, levels=groups)) 
 }
 
-matrix_data <- subset(games, select = c(turns, white_rating, black_rating, opening_eco, winner, victory_status, increment_code, opening_ply, white_id, black_id))
+matrix_data <- subset(games, select = c(turns, white_rating, black_rating, opening_eco, opening_ply, increment_code, winner, white_id, black_id))
 matrix_data$opening_eco <- char2num(matrix_data$opening_eco)
-matrix_data$winner <- char2num(matrix_data$winner)
-matrix_data$victory_status <- char2num(matrix_data$victory_status)
 matrix_data$increment_code <- char2num(matrix_data$increment_code)
+matrix_data$winner <- char2num(matrix_data$winner)
 matrix_data$white_id <- char2num(matrix_data$white_id)
 matrix_data$black_id <- char2num(matrix_data$black_id)
+
 corr <- cor(matrix_data)
-ggcorrplot(corr, lab = TRUE)
+ggcorrplot(corr, lab=T)
 ```
+
+#### How to read the correlation matrix
+
+The above correlation matrix gives us Pearson correlation coefficients, which is a way to measure the linear relationship between two variables. This value appears in the interval [-1;1], where the further the coefficient is from 0, the stronger the relationship between variables is. A positive coefficient indicates a positive correlation, and vice versa for a negative coefficient.
+
+#### Notable correlations
+
+We can see that white's and black's rating seems to be in correlation, which confirms what we saw from our initial visualisations. Indeed, players of similar ratings are paired together for random ranked games on Lichess. While the correlation is not as strong as I would have expected, I suspect that the reason for this is that a player can still play another player of any ranking, as there are no rules determining the maximum rating gap between players.
+
+Furthermore, black's and white's id's have a very strong correlation, which confirms that many players tend to play more than one game against one another.
+
+Finally, we can see a non negligible correlation between the chosen opening and the number of moves played in the opening phase.
+
+I am somewhat surprised that there seems to be a total absence of correlation between the number of turns and the opening, as some openings are more aggressive/sharp, while others are more passive, potentially leading to slow and complex middle- and endgames.

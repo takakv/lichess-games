@@ -59,7 +59,7 @@ We can now confirm that the data is skewed towards higher ratings, so this is so
 options(dplyr.summarise.inform = FALSE)
 country_freq <- group_by(processed_data, Country) %>% summarise(Count=n()) %>% arrange(desc(Count))
 barplot(country_freq$Count, names=country_freq$Country, las=2, main="Number of ratings per country", ylab="Count", cex.names=.8)
-barplot(country_freq$Count[0:5], names=country_freq$Country[0:5], main="Countries with most ratings", ylab="Count")
+barplot(country_freq$Count[0:5], names=country_freq$Country[0:5], main="Countries with most ratings", ylab="Count", col=brewer.pal(n=5, name="Blues"))
 ```
 
 We can suppose that the countries with most ratings are the countries with the biggest ramen markets. While the rating metric only shows which countries the most ratings have come from, we can correlate interest in rating with interest in ramen, and possibly consumption. It makes sense for the largest markets to be Asian, but also for the USA to be included, as it has a large population and a diverse and extensive culinary range.
@@ -146,4 +146,22 @@ formattable(style_overview)
 ```{r}
 country_overview <- group_by(processed_data, Country) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
 formattable(country_overview)
+```
+
+
+```{r}
+install.packages("ggcorrplot")
+library(ggcorrplot)
+
+char2num<-function(x) { 
+  groups = unique(x) 
+  as.numeric(factor(x, levels=groups)) 
+}
+
+matrix_data <- processed_data
+matrix_data$Country <- char2num(processed_data$Country)
+matrix_data$Style <- char2num(processed_data$Style)
+matrix_data$Brand <- char2num(processed_data$Brand)
+corr <- cor(matrix_data)
+ggcorrplot(corr, lab = TRUE)
 ```
