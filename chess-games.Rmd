@@ -147,36 +147,24 @@ iqr = function(x) {
 }
 ```
 
-### Number of turns
+```{r}
+add_quant <- function(x, y, z) {
+  dig <- 2
+  x %>% add_row(Name = z, Mean = round(mean(y), digits=dig), Median = round(median(y), digits=dig), Mode = round(mode(y), digits=dig), Trimean = round(trimean(y), digits=dig), "Geometric mean" = round(gm_mean(y), digits=dig), Range = round(rel_range(y), digits=dig), IQR = round(iqr(y), digits=dig), Variance = round(var(y), digits=dig), "Standard deviation" = round(sd(y), digits=dig))
+}
 
-```{r warning=FALSE}
-turns_overview <- games %>% summarise(Mean = mean(turns), Median = median(turns), Mode = mode(turns), Trimean = trimean(turns), "Geometric mean" = gm_mean(turns), "20% Trimmed mean" = mean(turns, trim=.2), Range = rel_range(turns), IQR = iqr(turns), Variance = var(turns), "Standard deviation" = sd(turns))
-turns_overview <- turns_overview %>% gather("Measure", "Value")
-formattable(turns_overview)
-```
+quant_names <- c("Mean", "Median", "Mode", "Trimean", "Geometric mean", "Range", "IQR", "Variance", "Standard deviation");
 
-### White rating
+quant_overview <- data.frame(matrix(ncol=9, nrow=0));
+names(quant_overview) <- quant_names
+quant_overview <- rownames_to_column(quant_overview, var = "Name")
 
-```{r warning=FALSE}
-w_rating_overview <- games %>% summarise(Mean = mean(white_rating), Median = median(white_rating), Mode = mode(white_rating), Trimean = trimean(white_rating), "Geometric mean" = gm_mean(white_rating), "20% Trimmed mean" = mean(white_rating, trim=.2), Range = rel_range(white_rating), IQR = iqr(white_rating), Variance = var(white_rating), "Standard deviation" = sd(white_rating))
-w_rating_overview <- w_rating_overview %>% gather("Measure", "Value")
-formattable(w_rating_overview)
-```
+quant_overview <- add_quant(quant_overview, games$turns, "Rounds")
+quant_overview <- add_quant(quant_overview, games$white_rating, "White rating")
+quant_overview <- add_quant(quant_overview, games$black_rating, "Black rating")
+quant_overview <- add_quant(quant_overview, games$opening_ply, "Opening moves")
 
-### Black rating
-
-```{r warning=FALSE}
-b_rating_overview <- games %>% summarise(Mean = mean(black_rating), Median = median(black_rating), Mode = mode(black_rating), Trimean = trimean(black_rating), "Geometric mean" = gm_mean(black_rating), "20% Trimmed mean" = mean(black_rating, trim=.2), Range = rel_range(black_rating), IQR = iqr(black_rating), Variance = var(black_rating), "Standard deviation" = sd(black_rating))
-b_rating_overview <- b_rating_overview %>% gather("Measure", "Value")
-formattable(b_rating_overview)
-```
-
-### Moves in opening phase
-
-```{r warning=FALSE}
-ply_overview <- games %>% summarise(Mean = mean(opening_ply), Median = median(opening_ply), Mode = mode(opening_ply), Trimean = trimean(opening_ply), "Geometric mean" = gm_mean(opening_ply), "20% Trimmed mean" = mean(opening_ply, trim=.2), Range = rel_range(opening_ply), IQR = iqr(opening_ply), Variance = var(opening_ply), "Standard deviation" = sd(opening_ply))
-ply_overview <- ply_overview %>% gather("Measure", "Value")
-formattable(ply_overview)
+formattable(quant_overview)
 ```
 
 ## Examining relationships
