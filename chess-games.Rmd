@@ -33,6 +33,7 @@ library(ggcorrplot)
 library(tidyverse)
 library(tidyr)
 library(dplyr)
+library(formattable)
 games <- read.csv("games.csv")
 ```
 
@@ -62,41 +63,9 @@ ggplot(games) + geom_histogram(aes(x=white_rating), binwidth=100, fill="skyblue1
 
 We can see that the ratings for both white and black are mostly overlapping. This does not come as a surprise as a player should be able to play both as white and as black, and therefore would have comparable ratings for both of those colours. Interestingly enough, it would seem that there are slightly higher ratings for white, as the level of game increases, while black ratings seem to have a minimal edge for lower ranked players. 
 
-#### Countries
-
-```{r}
-options(dplyr.summarise.inform = FALSE)
-country_freq <- group_by(processed_data, Country) %>% summarise(Count=n()) %>% arrange(desc(Count))
-barplot(country_freq$Count, names=country_freq$Country, las=2, main="Number of ratings per country", ylab="Count", cex.names=.8)
-barplot(country_freq$Count[0:5], names=country_freq$Country[0:5], main="Countries with most ratings", ylab="Count", col=brewer.pal(n=5, name="Blues"))
-```
-
-We can suppose that the countries with most ratings are the countries with the biggest ramen markets. While the rating metric only shows which countries the most ratings have come from, we can correlate interest in rating with interest in ramen, and possibly consumption. It makes sense for the largest markets to be Asian, but also for the USA to be included, as it has a large population and a diverse and extensive culinary range.
-
-#### Common types
-
-```{r}
-options(dplyr.summarise.inform = FALSE)
-type_freq <- group_by(processed_data, Style) %>% summarise(Count=n()) %>% arrange(desc(Count))
-barplot(type_freq$Count, names=type_freq$Style, main="Ramen types", ylab="Count", cex.names=.8)
-```
-
-We can see that the most popular type of ramen by a wide margin is pack ramen, which shouldn't come as a surprise considering the convenience and popularity of "instant ramen". Bowl and cup types follow, which is are also quite predictable for seasoned ramen enthusiasts.
-
-#### Common brands
-
-```{r}
-options(dplyr.summarise.inform = FALSE)
-brand_freq <- group_by(processed_data, Brand) %>% summarise(Count=n()) %>% arrange(desc(Count))
-barplot(brand_freq$Count[0:5], names=brand_freq$Brand[0:5], main="Biggest brands", ylab="Count")
-```
-
-The ramen brand dominating the market is Nissin, with almost no direct competition. A few other brands are also sizeable, but not as popular and thus most likely not as widespread as Nissin is. Many ramen brands only have a single product. This of course doesn't mean that the company has only produced a single type of ramen, but only a single one has been rated, which suggest that these brands are minor players, even if they have more varieties.
-
-
 ## Quantitative overview
 
-We can now more closely examine the ratings of ramen as they are grouped by brand, type and country. This helps us understand both overall and localised reception of ramen.
+We can now more closely examine our quantitative variables: the amount of turns, white/black ratings, and the amount of moves in the opening phase of a game.
 
 Helper functions:
 
@@ -128,35 +97,41 @@ iqr = function(x) {
 }
 ```
 
-### General rating analysis
+### Number of turns
 
 ```{r warning=FALSE}
-ratings_overview <- processed_data %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2), Range = rel_range(Stars), IQR = iqr(Stars), Variance = var(Stars), "Standard deviation" = sd(Stars))
-ratings_overview <- ratings_overview %>% gather("Measure", "Value")
-formattable(ratings_overview)
+turns_overview <- games %>% summarise(Mean = mean(turns), Median = median(turns), Mode = mode(turns), Trimean = trimean(turns), "Geometric mean" = gm_mean(turns), "20% Trimmed mean" = mean(turns, trim=.2), Range = rel_range(turns), IQR = iqr(turns), Variance = var(turns), "Standard deviation" = sd(turns))
+turns_overview <- turns_overview %>% gather("Measure", "Value")
+formattable(turns_overview)
 ```
 
-### Ramen ratings per brand
+### White rating
 
-```{r}
-brands_overview <- group_by(processed_data, Brand) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
-formattable(brands_overview)
+```{r warning=FALSE}
+w_rating_overview <- games %>% summarise(Mean = mean(white_rating), Median = median(white_rating), Mode = mode(white_rating), Trimean = trimean(white_rating), "Geometric mean" = gm_mean(white_rating), "20% Trimmed mean" = mean(white_rating, trim=.2), Range = rel_range(white_rating), IQR = iqr(white_rating), Variance = var(white_rating), "Standard deviation" = sd(white_rating))
+w_rating_overview <- w_rating_overview %>% gather("Measure", "Value")
+formattable(w_rating_overview)
 ```
 
-### Ramen ratings per style
+### Black rating
 
-```{r}
-style_overview <- group_by(processed_data, Style) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
-formattable(style_overview)
+```{r warning=FALSE}
+b_rating_overview <- games %>% summarise(Mean = mean(black_rating), Median = median(black_rating), Mode = mode(black_rating), Trimean = trimean(black_rating), "Geometric mean" = gm_mean(black_rating), "20% Trimmed mean" = mean(black_rating, trim=.2), Range = rel_range(black_rating), IQR = iqr(black_rating), Variance = var(black_rating), "Standard deviation" = sd(black_rating))
+b_rating_overview <- b_rating_overview %>% gather("Measure", "Value")
+formattable(b_rating_overview)
 ```
 
-### Ramen ratings per country
+### Moves in opening phase
 
-```{r}
-country_overview <- group_by(processed_data, Country) %>% summarise(Mean = mean(Stars), Median = median(Stars), Mode = mode(Stars), Trimean = trimean(Stars), "Geometric mean" = gm_mean(Stars), "20% Trimmed mean" = mean(Stars, trim=.2))
-formattable(country_overview)
+```{r warning=FALSE}
+ply_overview <- games %>% summarise(Mean = mean(opening_ply), Median = median(opening_ply), Mode = mode(opening_ply), Trimean = trimean(opening_ply), "Geometric mean" = gm_mean(opening_ply), "20% Trimmed mean" = mean(opening_ply, trim=.2), Range = rel_range(opening_ply), IQR = iqr(opening_ply), Variance = var(opening_ply), "Standard deviation" = sd(opening_ply))
+ply_overview <- ply_overview %>% gather("Measure", "Value")
+formattable(ply_overview)
 ```
 
+## Examining relationships
+
+### Correlation matrices
 
 ```{r}
 char2num<-function(x) { 
