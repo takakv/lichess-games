@@ -30,13 +30,14 @@ There are a few more variables that I have chosen to ignore:
 To make the data-set more approachable, I conducted some visualisations to better understand the type and layout of the data I am working with. Initial visualisations can help give us clues about how to process the data later on, or what calls for further and more detailed analysis.
 
 ```{r include=FALSE}
-library(ggplot2)
+library(ggplot2) #graphs
 library(ggcorrplot)
-library(tidyverse)
+library(tidyverse) # various tools
 library(tidyr)
 library(dplyr)
-library(formattable)
-library(RColorBrewer)
+library(formattable) # tables
+library(RColorBrewer) # gradients
+library(caret) # required for test and training set
 games <- read.csv("games.csv")
 ```
 
@@ -189,8 +190,44 @@ The above correlation matrix gives us Pearson correlation coefficients, which is
 
 We can see that white's and black's rating seems to be in correlation, which confirms what we saw from our initial visualisations. Indeed, players of similar ratings are paired together for random ranked games on Lichess. While the correlation is not as strong as I would have expected, I suspect that the reason for this is that a player can still play another player of any ranking, as there are no rules determining the maximum rating gap between players.
 
-Furthermore, black's and white's id's have a very strong correlation, which confirms that many players tend to play more than one game against one another.
+Furthermore, black's and white's id's have a very strong correlation, which confirms that many players tend to play more than one game against one another. However, as those are qualitative variables, it is difficult to visualise their relationship on a graph, instead, a contingency table should be used.
 
-Finally, we can see a non negligible correlation between the chosen opening and the number of moves played in the opening phase.
+Finally, we can see a non negligible correlation between the chosen opening and the number of moves played in the opening phase. Likewise, as these variables are qualitative, visualising them on a graph is not feasible.
 
 I am somewhat surprised that there seems to be a total absence of correlation between the number of turns and the opening, as some openings are more aggressive/sharp, while others are more passive, potentially leading to slow and complex middle- and endgames.
+
+### Dependent and independent variable relationships
+
+#### White and black ratings
+
+```{r}
+ratings_matrix <- subset(games, select = c(white_rating, black_rating))
+ggplot(ratings_matrix, aes(x=white_rating, y=black_rating)) + geom_point(color="royalblue4") + ggtitle("Relationship of white and black ratings") + xlab("White rating") + ylab("Black rating")
+```
+
+### Regression model
+
+Since there is only one quantitative linear correlation, I will have to work with the white and black ratings relationship.
+
+To avoid overplotting, I round the ratings to the nearest multiple of 25, which isn't a huge gap to close for players with ratings lower than 2200. Players above that are scarcer in any case, and their games are less likely to be against opponents of same ratings on Lichess.
+
+```{r}
+ratings_matrix$white_rating <- round(ratings_matrix$white_rating/25)*25
+ratings_matrix$black_rating <- round(ratings_matrix$black_rating/25)*25
+ggplot(ratings_matrix, aes(x=white_rating, y=black_rating)) + geom_point(alpha=1/4, color="royalblue4") + ggtitle("Linear relationship of ratings") + xlab("White rating") + ylab("Black rating") + geom_smooth(method="lm", formula=y~x, color="firebrick1")
+```
+
+## Training and testing regression models
+
+### Choosing and splitting the dataset
+
+I have chosen to train the model on 80% of the data set, which leaves 20% for testing.
+
+```{r}
+set.seed(123)
+sample <- createDataPartition(games$white_rating, p=.8, list=F)
+training <- games[sample,]
+testing <- games[-sample,]
+
+lm1 <- train(white_rating~., data=training, method = "lm")
+```
