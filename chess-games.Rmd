@@ -36,8 +36,8 @@ library(tidyverse) # various tools
 library(tidyr)
 library(dplyr)
 library(reshape2)
-library(formattable) # tables
-library(RColorBrewer) # gradients
+library(formattable) # 
+library(ggsci) # palettes
 library(caret) # required for test and training set
 games <- read.csv("games.csv")
 ```
@@ -109,9 +109,20 @@ It would seem that as games drag out, draws become more common. This could be du
 
 ```{r}
 black_wins <- subset(games, winner=="black") %>% group_by(opening_eco) %>% summarise(Count=n()) %>% arrange(desc(Count))
-white_wins <- subset(games, winner=="white") %>% group_by(opening_eco) %>% summarise(Count=n())
-```
+white_wins <- subset(games, winner=="white") %>% group_by(opening_eco) %>% summarise(Count=n()) %>% arrange(desc(Count))
 
+white_wins$percentage <- white_wins$Count / nrow(subset(games, winner=="white"))
+black_wins$percentage <- black_wins$Count / nrow(subset(games, winner=="black"))
+
+char2num<-function(x) { 
+  groups = unique(x) 
+  as.numeric(factor(x, levels=groups)) 
+}
+
+ggplot(white_wins[1:7,], aes(x=opening_eco, y=percentage)) + geom_bar(stat = "identity") + ggtitle("Top 7 openings for white by win percent") + xlab("ECO opening code") + ylab("Percentage (out of 1)")
+
+ggplot(black_wins[1:7,], aes(x=opening_eco, y=percentage)) + geom_bar(stat = "identity") + ggtitle("Top 7 openings for black by win percent") + xlab("ECO opening code") + ylab("Percentage (out of 1)")
+```
 
 ## Quantitative overview
 
