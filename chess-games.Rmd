@@ -231,16 +231,16 @@ ggplot(ratings_matrix, aes(x=white_rating, y=black_rating)) + geom_point(alpha=1
 
 ### Choosing and splitting the dataset
 
-I have chosen to train the model on 80% of the data set, which leaves 20% for testing.
+I have chosen to train the model on 80% of of the data set, which leaves 20% for testing.
 
 ```{r}
-set.seed(123)
-sample <- createDataPartition(games$white_rating, p=.8, list=F)
-training <- games[sample,]
-testing <- games[-sample,]
+relevant_data <- subset(games, select = c(white_rating, black_rating))
+sample <- createDataPartition(relevant_data$white_rating, p=.8, list=F)
+training <- relevant_data[sample,]
+testing <- relevant_data[-sample,]
 
-memory.size()
-memory.limit()
-memory.limit(size=16000)
-lm1 <- train(white_rating~., data=training, method = "lm")
+set.seed(123)
+lm1 <- train(white_rating ~ ., data=training, method = "gam")
+lm1
+predict(lm1, newdata = head(testing))
 ```
