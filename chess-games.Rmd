@@ -9,13 +9,13 @@ The chosen dataset concerns over 20 000 games played on the popular online chess
 
 The following variables are of use to me:
 
-- Turns: the number of turns (double the number of moves) it took for the game to end, a quantitative variable (continuous integers)
+- Turns: the number of turns (double the number of moves) it took for the game to end, a quantitative variable (discrete | continuous if one considers integers with step 1)
 - Victory status: the type of event that concluded the match, a qualitative variable
 - Winner: the colour of the winning party, a qualitative variable
 - Increment code: type of game-time incrementation used, a qualitative variable
-- White/Black rating: Lichess ([Glicko-2](https://www.glicko.net/glicko/glicko2.pdf)) rating based on user's ranked game history, a quantitative variable (continuous integers)
+- White/Black rating: Lichess ([Glicko-2](https://www.glicko.net/glicko/glicko2.pdf)) rating based on user's ranked game history, a quantitative variable (discrete | continuous if one considers integers with step 1)
 - Opening eco: the chess opening code for a given opening, a qualitative variable
-- Opening ply: the number of moves in the opening phase, a quantitative variable (continuous integers)
+- Opening ply: the number of moves in the opening phase, a quantitative variable (discrete | continuous if one considers integers with step 1)
 
 There are a few more variables that I have chosen to ignore:
 
