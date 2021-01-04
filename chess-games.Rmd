@@ -39,7 +39,8 @@ library(reshape2)
 library(formattable)
 library(ggsci) # palettes
 library(caret) # required for test and training set
-games <- read.csv("games.csv")
+library(MLmetrics)
+games <- read.csv("games.csv", header=T, stringsAsFactors=T)
 ```
 
 ### Visualising the amount of turns
@@ -91,7 +92,7 @@ victory_status <- group_by(games, victory_status) %>% summarise(Count=n()) %>% a
 ggplot(victory_status, aes(x="", y=Count, fill=victory_status)) + geom_bar(stat="identity", width=1, color="black") + coord_polar("y", start=0) + theme_void() + ggtitle("Game end status") + theme(legend.title=element_blank()) + scale_fill_manual(values=c("skyblue1", "indianred1", "grey91", "lightsalmon1"))
 ```
 
-We can see that in most cases, the game ended by resign. This is unsurprising as in chess, especially in higher levels, a player will often resign when they see that their position is irrecoverable.
+We can see that in most cases, the game ended due to one party resigning. This is unsurprising as in chess, especially in higher levels, a player will often resign when they see that their position is irrecoverable.
 
 It is worthy to note that games that ended due to lack of time most likely also encompass games where one player abandoned the game without resigning. Such games then ended when the timer reached 0. The basis for my reasoning is that in longer time controls, losing due to time running out is not so likely, especially if we consider the relative size to game ends by draw.
 
@@ -175,9 +176,9 @@ formattable(quant_overview)
 
 The mode tells us that the most common rating for both white and black is 1500. This makes sense as it is the default rating given to a user by Lichess upon creating an account. If a user never plays ranked matches, their rating will stay at 1500 until they play ranked matches. It seems that on average, players have slightly higher ratings as white (hence win more games as white) which again correlates to the first move advantage present in chess.
 
-From the range we can see that there are both very highly rated players on Lichess, hence probably some international and gradnmasters, as well as players who should probably rethink their approach to playing and studying chess, as their low ratings point to them losing most of the games they play against opponents of presumably comparable ratings.
+From the range we can see that there are both very highly rated players on Lichess, hence probably some international and grandmasters, as well as players who should probably rethink their approach to playing and studying chess, as their low ratings point to them losing most of the games they play against opponents of presumably comparable ratings.
 
-The standard deviation is not very high either if we factor in the nature of the Glicko scale, and how easy it is to move up or down in ratings within the 1200-1700 rating range, after first joining Lichess (due to off-platform proficiency). It would seem that the average player is however rated slightlty more than the Lichess default of 1500, and player ratings do not deviate remarkably far from that average.
+The standard deviation is not very high either if we factor in the nature of the Glicko scale, and how easy it is to move up or down in ratings within the 1200-1700 rating range, after first joining Lichess (due to off-platform proficiency). It would seem that the average player is however rated slightly more than the Lichess default of 1500, and player ratings do not deviate remarkably far from that average.
 
 We can see that half of games played aren't longer than 55 turns, with the most games lasting for 53 turns. Interestingly, the average number of turns of a game is 60.47 which would suggest that there is a non negligible amount of games that dragged on for large numbers of turns.
 
@@ -187,7 +188,7 @@ Concerning the opening moves, it seems that on average, almost 5 moves are playe
 
 In conclusion we can say that the Lichess games data set is not very surprising, if one factors in the fact that both hobby or even rookie players, and club or even master players can be found on the platform. Of course such mishmash will provide deviations from chess statistics from tournament and club games, but it's a wonderful way to show the broad appeal and various approaches that the game has.
 
-The quantitative overview of variables corresponds very well to the initial visualisations of the data set, with no devaitions worthy of concern.
+The quantitative overview of variables corresponds very well to the initial visualisations of the data set, with no deviations worthy of concern.
 
 ## Examining relationships
 
@@ -258,22 +259,34 @@ I have chosen to train the model on 80% of of the data set, which leaves 20% for
 ```{r}
 relevant_data <- subset(games, select = c(white_rating, black_rating))
 sample <- createDataPartition(relevant_data$white_rating, p=.8, list=F)
+
+#$white_rating <- as.factor(relevant_data$white_rating)
 training <- relevant_data[sample,]
 testing <- relevant_data[-sample,]
 
+#training <- data.frame(training)
+```
+
+### Training regression models on the training set
+
+I will be using k-fold cross validation method when training my models, which involves splitting the dataset into k-subsets called folds. All k-1 folds will then be trained/analysed and the analysis is then validated on the remaining subset. This process is repeated until each fold has been a test subset, and the overall prediction accuracy can then be estimated by computing the average of the k recorded errors.
+
+```{r}
+tc <- trainControl(method="cv", number=10)
 set.seed(123)
 # Linear regression model
-lm_mod <- train(white_rating ~ ., data=training, method="lm")
+lm_mod <- train(white_rating ~ ., data=training, method="lm", trControl=tc)
+gbm <- train(white_rating ~ ., data=training, method="gbm", trControl=tc)
 # Generalised linear model
 glm_mod <- train(white_rating ~ ., data=training, method="glm")
 # k-nearest neighbors
 knn_mod <- train(white_rating ~ ., data=training, method="knn")
 # Robust linear model
 rlm_mod <- train(white_rating ~ ., data=training, method="rlm")
-# Quantile regression neuiral network
+# Quantile regression neural network
 #qrnn_mod <- train(white_rating ~ ., data=training, method="qrnn")
 # Neural net
-neural_mod <- train(white_rating ~ ., data=training, method="neuralnet")
+#neural_mod <- train(white_rating ~ ., data=training, method="neuralnet")
 # Lasso
 #lasso_mod <- train(white_rating ~ ., data=training, method="lasso")
 # Ridge regression
@@ -281,3 +294,28 @@ neural_mod <- train(white_rating ~ ., data=training, method="neuralnet")
 # Elasticnet
 #enet_mod <- train(white_rating ~ ., data=training, method="enet")
 ```
+
+### Testing the models
+
+```{r}
+metric_names <- c("R2", "RMSE", "MAE", "MAPE", "MSE");
+model_metrics <- data.frame(matrix(ncol=5, nrow=0));
+names(model_metrics) <- metric_names
+model_metrics <- rownames_to_column(model_metrics, var = "Metric name")
+
+add_mm <- function(x, y) {
+  predictions <- x %>% predict(testing)
+  dig <- 2
+  model_metrics %>% add_row("Metric name" = y, R2=R2(predictions, testing$white_rating), RMSE=RMSE(predictions, testing$white_rating), MAE=MAE(predictions, testing$white_rating), MAPE=MAPE(predictions, testing$white_rating), MSE=MSE(predictions, testing$white_rating))
+}
+
+
+model_metrics <- add_mm(lm_mod, "Linear regression model")
+model_metrics <- add_mm(glm_mod, "Generalised linear model")
+model_metrics <- add_mm(knn_mod, "K-nearest neighbours")
+model_metrics <- add_mm(rlm_mod,  "Robust linear model")
+
+formattable(model_metrics)
+```
+
+### Conclusion
