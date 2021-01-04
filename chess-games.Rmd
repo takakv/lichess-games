@@ -36,7 +36,7 @@ library(tidyverse) # various tools
 library(tidyr)
 library(dplyr)
 library(reshape2)
-library(formattable) # 
+library(formattable)
 library(ggsci) # palettes
 library(caret) # required for test and training set
 games <- read.csv("games.csv")
@@ -48,11 +48,11 @@ games <- read.csv("games.csv")
 ggplot(games, aes(turns)) + geom_histogram(aes(y=..density..), binwidth=15, fill="salmon1", color="black") + ggtitle("Distribution of turn counts") + xlab("Turn count") + ylab("Density of games") + geom_density(color="salmon4", alpha=.5, size=1)
 ```
 
-The game turns histogram looks ordinary. It is right-skewed (positive skew) and the average turn count seems to be around 50. In fact, this somewhat corresponds to data by [chessstats](https://www.chessgames.com/chessstats.html), which states that average number of moves per game is about 41, although it is still quite a bit higher.
+The game turns histogram looks ordinary. It is right-skewed (positive skew) and the average turn count seems to be withing the fifties. In fact, this somewhat corresponds to data by [chessstats](https://www.chessgames.com/chessstats.html), which states that average number of moves per game is about 41, although it is still quite a bit higher.
 
 ### Visualising the ratings
 
-As the most optimal opponent range has a rating of +/- 100 to 150, I have chosen a bin size of 100 for the ratings histogram. 
+As the most optimal opponent range has a rating of +/- 100 to 150, I have chosen a bin size of 100 for the ratings histogram.
 
 ```{r}
 ggplot(games, aes(x=white_rating)) + geom_histogram(aes(y=..density..), binwidth=100, fill="skyblue1", color="black") + ggtitle("White rating density") + xlab("Rating") + ylab("Density of players") + geom_density(color="royalblue4", alpha=.5, size=1)
@@ -114,11 +114,6 @@ white_wins <- subset(games, winner=="white") %>% group_by(opening_eco) %>% summa
 white_wins$percentage <- white_wins$Count / nrow(subset(games, winner=="white"))
 black_wins$percentage <- black_wins$Count / nrow(subset(games, winner=="black"))
 
-char2num<-function(x) { 
-  groups = unique(x) 
-  as.numeric(factor(x, levels=groups)) 
-}
-
 ggplot(white_wins[1:7,], aes(x=opening_eco, y=percentage)) + geom_bar(stat = "identity") + ggtitle("Top 7 openings for white by win percent") + xlab("ECO opening code") + ylab("Percentage (out of 1)")
 
 ggplot(black_wins[1:7,], aes(x=opening_eco, y=percentage)) + geom_bar(stat = "identity") + ggtitle("Top 7 openings for black by win percent") + xlab("ECO opening code") + ylab("Percentage (out of 1)")
@@ -177,6 +172,22 @@ quant_overview <- add_quant(quant_overview, games$opening_ply, "Opening moves")
 
 formattable(quant_overview)
 ```
+
+The mode tells us that the most common rating for both white and black is 1500. This makes sense as it is the default rating given to a user by Lichess upon creating an account. If a user never plays ranked matches, their rating will stay at 1500 until they play ranked matches. It seems that on average, players have slightly higher ratings as white (hence win more games as white) which again correlates to the first move advantage present in chess.
+
+From the range we can see that there are both very highly rated players on Lichess, hence probably some international and gradnmasters, as well as players who should probably rethink their approach to playing and studying chess, as their low ratings point to them losing most of the games they play against opponents of presumably comparable ratings.
+
+The standard deviation is not very high either if we factor in the nature of the Glicko scale, and how easy it is to move up or down in ratings within the 1200-1700 rating range, after first joining Lichess (due to off-platform proficiency). It would seem that the average player is however rated slightlty more than the Lichess default of 1500, and player ratings do not deviate remarkably far from that average.
+
+We can see that half of games played aren't longer than 55 turns, with the most games lasting for 53 turns. Interestingly, the average number of turns of a game is 60.47 which would suggest that there is a non negligible amount of games that dragged on for large numbers of turns.
+
+While in chess the shortest mates are the [Fool's Mate](https://en.wikipedia.org/wiki/Fool%27s_mate) (2 turns) and the [Scholar's Mate](https://en.wikipedia.org/wiki/Scholar%27s_mate) (4 turns), a game can of course consist of only one turn in case of running out of time, or an immediate resign. As the range of turns is 348, we can deduce that there is at least one game with 349 turns, which solidifies our previous theory of some games reaching high turn counts.
+
+Concerning the opening moves, it seems that on average, almost 5 moves are played by the book, but most commonly, no more than 3 moves are from book opening variations. It is a bit surprising that the number is so low, as most opening theory covers way more moves, but as there aren't only club/pro players on Lichess, it makes sense that standard openings aren't followed by the book as often. The standard deviation is not very high, showing that most games fall have opening falls within three moves of the average number of moves in the opening phase.
+
+In conclusion we can say that the Lichess games data set is not very surprising, if one factors in the fact that both hobby or even rookie players, and club or even master players can be found on the platform. Of course such mishmash will provide deviations from chess statistics from tournament and club games, but it's a wonderful way to show the broad appeal and various approaches that the game has.
+
+The quantitative overview of variables corresponds very well to the initial visualisations of the data set, with no devaitions worthy of concern.
 
 ## Examining relationships
 
@@ -251,7 +262,22 @@ training <- relevant_data[sample,]
 testing <- relevant_data[-sample,]
 
 set.seed(123)
-lm1 <- train(white_rating ~ ., data=training, method = "gam")
-lm1
-predict(lm1, newdata = head(testing))
+# Linear regression model
+lm_mod <- train(white_rating ~ ., data=training, method="lm")
+# Generalised linear model
+glm_mod <- train(white_rating ~ ., data=training, method="glm")
+# k-nearest neighbors
+knn_mod <- train(white_rating ~ ., data=training, method="knn")
+# Robust linear model
+rlm_mod <- train(white_rating ~ ., data=training, method="rlm")
+# Quantile regression neuiral network
+#qrnn_mod <- train(white_rating ~ ., data=training, method="qrnn")
+# Neural net
+neural_mod <- train(white_rating ~ ., data=training, method="neuralnet")
+# Lasso
+#lasso_mod <- train(white_rating ~ ., data=training, method="lasso")
+# Ridge regression
+#ridge_mod <- train(white_rating ~ ., data=training, method="ridge")
+# Elasticnet
+#enet_mod <- train(white_rating ~ ., data=training, method="enet")
 ```
