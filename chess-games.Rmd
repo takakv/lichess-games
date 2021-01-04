@@ -271,18 +271,19 @@ testing <- relevant_data[-sample,]
 
 I will be using k-fold cross validation method when training my models, which involves splitting the dataset into k-subsets called folds. All k-1 folds will then be trained/analysed and the analysis is then validated on the remaining subset. This process is repeated until each fold has been a test subset, and the overall prediction accuracy can then be estimated by computing the average of the k recorded errors.
 
-```{r}
+```{r include=FALSE}
 tc <- trainControl(method="cv", number=10)
 set.seed(123)
-# Linear regression model
 lm_mod <- train(white_rating ~ ., data=training, method="lm", trControl=tc)
-gbm <- train(white_rating ~ ., data=training, method="gbm", trControl=tc)
-# Generalised linear model
-glm_mod <- train(white_rating ~ ., data=training, method="glm")
-# k-nearest neighbors
+cart_mod <- train(white_rating ~ ., data=training, method="rpart")
+
+#glm_mod <- train(white_rating ~ ., data=training, method="randomGLM")
+ext_mod <- train(white_rating ~ ., data=training, method="xgbLinear")
+brnn_mod <- train(white_rating ~ ., data=training, method="brnn")
+gbm_mod <- train(white_rating ~ ., data=training, method="gbm", trControl=tc)
 knn_mod <- train(white_rating ~ ., data=training, method="knn")
-# Robust linear model
 rlm_mod <- train(white_rating ~ ., data=training, method="rlm")
+#lmt_mod <- train(white_rating ~ ., data=training, method="LMT")
 # Quantile regression neural network
 #qrnn_mod <- train(white_rating ~ ., data=training, method="qrnn")
 # Neural net
@@ -311,9 +312,14 @@ add_mm <- function(x, y) {
 
 
 model_metrics <- add_mm(lm_mod, "Linear regression model")
-model_metrics <- add_mm(glm_mod, "Generalised linear model")
+#model_metrics <- add_mm(glm_mod, "Generalised linear regression model")
+model_metrics <- add_mm(brnn_mod, "Bayesian regularised neural networks")
+model_metrics <- add_mm(ext_mod, "eXtreme gradient boosting")
+model_metrics <- add_mm(cart_mod, "CART")
+model_metrics <- add_mm(gbm_mod, "Stochastic gradient boosting")
 model_metrics <- add_mm(knn_mod, "K-nearest neighbours")
-model_metrics <- add_mm(rlm_mod,  "Robust linear model")
+#model_metrics <- add_mm(lmt_mod,  "Robust linear model")
+#model_metrics <- add_mm(rlog_mod, "Logistic model trees")
 
 formattable(model_metrics)
 ```
