@@ -29,7 +29,9 @@ There are a few more variables that I have chosen to ignore:
 
 To make the data-set more approachable, I conducted some visualisations to better understand the type and layout of the data I am working with. Initial visualisations can help give us clues about how to process the data later on, or what calls for further and more detailed analysis.
 
-```{r}
+There are no missing values in the data set, therefore no additional processing is needed.
+
+```{r message=FALSE, warning=FALSE}
 library(ggplot2) #graphs
 library(ggcorrplot)
 library(tidyverse) # various tools
@@ -37,7 +39,6 @@ library(tidyr)
 library(dplyr)
 library(reshape2)
 library(formattable)
-library(ggsci) # palettes
 library(caret) # required for test and training set
 library(MLmetrics)
 games <- read.csv("games.csv", header=T, stringsAsFactors=T)
@@ -115,9 +116,16 @@ white_wins <- subset(games, winner=="white") %>% group_by(opening_eco) %>% summa
 white_wins$percentage <- white_wins$Count / nrow(subset(games, winner=="white"))
 black_wins$percentage <- black_wins$Count / nrow(subset(games, winner=="black"))
 
-ggplot(white_wins[1:7,], aes(x=opening_eco, y=percentage)) + geom_bar(stat = "identity") + ggtitle("Top 7 openings for white by win percent") + xlab("ECO opening code") + ylab("Percentage (out of 1)")
+ggplot(white_wins[1:7,], aes(x=opening_eco, y=percentage)) + geom_bar(stat = "identity", fill=c("#7d87b9", "#8dd593", "#bb7784", "#e6afb9", "#e07b91", "#f0b98d", "#9cded6"), alpha=1) + ggtitle("Top 7 openings for white by win percent") + xlab("ECO opening code") + ylab("Percentage (out of 1)")
 
-ggplot(black_wins[1:7,], aes(x=opening_eco, y=percentage)) + geom_bar(stat = "identity") + ggtitle("Top 7 openings for black by win percent") + xlab("ECO opening code") + ylab("Percentage (out of 1)")
+ggplot(black_wins[1:7,], aes(x=opening_eco, y=percentage)) + geom_bar(stat = "identity", fill=c("#8dd593", "#7d87b9", "#f0b98d", "#8595e1", "#e07b91", "#d6bcc0", "#8491b4b2"), alpha=1) + ggtitle("Top 7 openings for black by win percent") + xlab("ECO opening code") + ylab("Percentage (out of 1)")
+```
+
+A00 stands for ["Uncommon chess opening"](https://www.chessgames.com/perl/chessopening?eco=a00) and it is seemingly very profitable for both white and black. This however shouldn't be interpreted as "I can start however I want, and I will win", because simply because the majority of openings themselves are uncommon:
+
+```{r}
+top_openings <- games %>% group_by(opening_eco) %>% summarise(Count=n()) %>% arrange(desc(Count))
+ggplot(top_openings[1:7,], aes(x=opening_eco, y=Count)) + geom_bar(stat = "identity", fill=c("#8dd593", "#7d87b9", "#f0b98d", "#e07b91", "#bb7784", "#8595e1", "#9cded6"), alpha=1) + ggtitle("Top 7 openings by count") + xlab("ECO opening code") + ylab("Count")
 ```
 
 ## Quantitative overview
@@ -259,13 +267,31 @@ There seems to be a high rate of both white and black 1500 rated players who are
 Since there is only one quantitative linear correlation, I will have to work with the white and black ratings relationship. I will work on the overplotting-adapted data.
 
 ```{r}
-ggplot(ratings_matrix, aes(x=white_rating, y=black_rating)) + geom_point(alpha=1/4, color="royalblue4") + ggtitle("Linear relationship of ratings") + xlab("White rating") + ylab("Black rating") + geom_smooth(method="lm", formula=y~x, color="firebrick1")
+ggplot(ratings_matrix, aes(x=white_rating, y=black_rating)) + geom_point(alpha=1/4, color="royalblue4") + ggtitle("Linear regression model") + xlab("White rating") + ylab("Black rating") + geom_smooth(method="lm", formula=y~x, color="firebrick1")
 ```
 We can see that the linear regression model does not do a very good job at matching ratings, and thus would not be very suitable for any forms of interpolation or extrapolation. This is most likely due to partly the specificity of the Lichess data, that doesn't exactly map to competitive chess, but also due to the complexity of the rating model itself.
 
 In fact, as the higher one ranks on the Glicko scale, the harder it is to progress further up, and the easier it is to fall down, even simply drawing a few games could result in a drastic drop in rating, while a small improvement would only result from winning a few elite level games.
 
 Due to this, I suspect that alternative regression models should be used for predicting and mapping the relationship between ratings. In fact, I would guess that a logistic regression model would do a much better job at matching the graph.
+
+#### Generalised linear model
+
+#### Poisson regression
+
+```{r}
+ggplot(ratings_matrix, aes(x=white_rating, y=black_rating)) + geom_point(alpha=1/4, color="royalblue4") + ggtitle("Poisson regression model") + xlab("White rating") + ylab("Black rating") + geom_smooth(method="glm", formula=y~x, color="firebrick1", method.args=list(family="poisson"))
+```
+
+It isn't perfect yet but it seems to fit better. We can see that the curve is slightly more accurate in following the plot.
+
+#### Logistic regression
+
+```{r}
+ggplot(ratings_matrix, aes(x=white_rating, y=black_rating)) + geom_point(alpha=1/4, color="royalblue4") + ggtitle("Logistic regression model") + xlab("White rating") + ylab("Black rating") + geom_smooth(method="glm", formula=y~x, color="firebrick1", method.args=list(family="binomial"))
+```
+
+Now I truly believe this model would be quite a nice fit, however I simply cannot seem to find a way to debug the R error that causes the regression computation to fail. This issue is present also later in the training phase. No solutions from the web have helped.
 
 #### Alternative regression models
 
@@ -323,6 +349,7 @@ tc <- trainControl(method="cv", number=10)
 set.seed(123)
 
 lm_mod <- train(white_rating ~ ., data=training, method="lm", trControl=tc)
+poisson_mod <- train(white_rating ~ ., data=training, method="glm", trControl=tc, family=poisson)
 cart_mod <- train(white_rating ~ ., data=training, method="rpart", trControl=tc)
 ext_mod <- train(white_rating ~ ., data=training, method="xgbLinear", trControl=tc)
 brnn_mod <- train(white_rating ~ ., data=training, method="brnn", trControl=tc)
@@ -331,7 +358,7 @@ knn_mod <- train(white_rating ~ ., data=training, method="knn", trControl=tc)
 rlm_mod <- train(white_rating ~ ., data=training, method="rlm", trControl=tc)
 #glm_mod <- train(white_rating ~ ., data=training, method="randomGLM")
 
-# Commented out trainigs cause unexpected R errors that I haven't been able to debug
+# Commented out trainings that caused unexpected R errors that I haven't been able to debug
 #lmt_mod <- train(white_rating ~ ., data=training, method="LMT")
 # Quantile regression neural network
 #qrnn_mod <- train(white_rating ~ ., data=training, method="qrnn")
@@ -361,6 +388,7 @@ add_mm <- function(x, y) {
 
 
 model_metrics <- add_mm(lm_mod, "Linear regression model")
+model_metrics <- add_mm(poisson_mod, "Poisson regression model")
 model_metrics <- add_mm(brnn_mod, "Bayesian regularised neural networks")
 model_metrics <- add_mm(ext_mod, "eXtreme gradient boosting")
 model_metrics <- add_mm(cart_mod, "CART")
@@ -381,7 +409,9 @@ How to read the metrics:
 - MAPE: the lower the better (0-1)
 - MSE: the lower the better, quite bad in all cases here
 
-We can see that the best model seems to be ...
+We can see that the best models appear to be the Bayesian regularised neural networks and the eXtreme gradient boosting. On some runs one has a slight edge, other times the other. Both are therefore a solid model to use for prediction, which to pick depends more on which will run better on the given hardware, as they use fairly different processing tactics.
+
+Stochastic gradient boosting is another method that has quite high reliability.....relatively speaking.
 
 ### Conclusion
 
