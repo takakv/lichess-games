@@ -411,7 +411,11 @@ How to read the metrics:
 
 We can see that the best models appear to be the Bayesian regularised neural networks and the eXtreme gradient boosting. On some runs one has a slight edge, other times the other. Both are therefore a solid model to use for prediction, which to pick depends more on which will run better on the given hardware, as they use fairly different processing tactics.
 
-Stochastic gradient boosting is another method that has quite high reliability.....relatively speaking.
+We can see that the best models appear to be the stochastic gradient boosting and eXtreme gradient boosting. Both are therefore solid models to use for prediction, which is unsurprising, as they have quite a lot in common.
+
+Bayesian regularised neural networks are another method that have quite high reliability.....relatively speaking, and may be a solid option when one has endless gpu power.
+
+It seems that Poisson and CART models should not be used on our data, which proves wrong my precious though that Poisson regression looked better on the graph than linear regression. This is most likely due to the peculiarities of the Glicko rating, and the non uniform rating-bracket matches played on Lichess.
 
 ### Conclusion
 
@@ -435,7 +439,7 @@ First, the player needs to get 6 correct numbers out of 48. There is a chance of
 $$\frac{48!}{6!(48-6)!}=\frac{48!}{6!*42!}=12271512$$
 
 Then, to get 1 correct number out of 8, the chance is evidently 1/8. The probability of winning the jackpot is thus 1 in 98,172,096.
-$$\frac{1}{12271512}*\frac{1}{8}=98172096$$
+$$\frac{1}{12271512}*\frac{1}{8}=\frac{1}{98172096}$$
 
 ### Hypergeometric distribution
 
@@ -457,7 +461,25 @@ dist <- function(totalNr, totalSlots, matchCount) {
   num / denom
 }
 
-dist(48, 6, 6)
+add_odd <- function(x, y) {
+  dig <- 2
+  odd_counts %>% add_row("Numbers matched" = paste("Match ", x, " + ", y), "Probability of winning" = dist(48, 6, x) * dist(8, 1, y))
+}
+
+odd_counts <- data.frame(matrix(ncol=1, nrow=0));
+names(odd_counts) <- c("Probability of winning")
+odd_counts <- rownames_to_column(odd_counts, var = "Numbers matched")
+
+odd_counts <- add_odd(6, 1)
+odd_counts <- add_odd(6, 0)
+odd_counts <- add_odd(5, 1)
+odd_counts <- add_odd(5, 0)
+odd_counts <- add_odd(4, 1)
+odd_counts <- add_odd(4, 0)
+odd_counts <- add_odd(3, 1)
+odd_counts <- add_odd(3, 0)
+
+formattable(odd_counts)
 ```
 
 #### Results
