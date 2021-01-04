@@ -3,7 +3,7 @@ title: "Chess games analysis"
 output: html_notebook
 ---
 
-# About the dataset
+## About the dataset
 
 The chosen dataset concerns over 20 000 games played on the popular online chess website [Lichess](https://lichess.org). It contains both qualitative and quantitative data and lends itself to many forms of analysis and study. The dataset itself comes from [kaggle](https://www.kaggle.com/datasnaek/chess).
 
@@ -29,7 +29,7 @@ There are a few more variables that I have chosen to ignore:
 
 To make the data-set more approachable, I conducted some visualisations to better understand the type and layout of the data I am working with. Initial visualisations can help give us clues about how to process the data later on, or what calls for further and more detailed analysis.
 
-```{r include=FALSE}
+```{r}
 library(ggplot2) #graphs
 library(ggcorrplot)
 library(tidyverse) # various tools
@@ -229,6 +229,8 @@ Finally, we can see a non negligible correlation between the chosen opening and 
 
 I am somewhat surprised that there seems to be a total absence of correlation between the number of turns and the opening, as some openings are more aggressive/sharp, while others are more passive, potentially leading to slow and complex middle- and endgames.
 
+As qualitative variables are best suited for classification and not regression, I won't be treating them in this project.
+
 ### Dependent and independent variable relationships
 
 #### White and black ratings
@@ -238,17 +240,62 @@ ratings_matrix <- subset(games, select = c(white_rating, black_rating))
 ggplot(ratings_matrix, aes(x=white_rating, y=black_rating)) + geom_point(color="royalblue4") + ggtitle("Relationship of white and black ratings") + xlab("White rating") + ylab("Black rating")
 ```
 
-### Regression model
-
-Since there is only one quantitative linear correlation, I will have to work with the white and black ratings relationship.
-
-To avoid overplotting, I round the ratings to the nearest multiple of 25, which isn't a huge gap to close for players with ratings lower than 2200. Players above that are scarcer in any case, and their games are less likely to be against opponents of same ratings on Lichess.
+Let's try to avoid overplotting, I round the ratings to the nearest multiple of 25, which isn't a huge gap to close for players with ratings lower than 2200. Players above that are scarcer in any case, and their games are less likely to be against opponents of same ratings on Lichess.
 
 ```{r}
 ratings_matrix$white_rating <- round(ratings_matrix$white_rating/25)*25
 ratings_matrix$black_rating <- round(ratings_matrix$black_rating/25)*25
+ggplot(ratings_matrix, aes(x=white_rating, y=black_rating)) + geom_point(alpha=1/4, color="royalblue4") + ggtitle("Relationship of white and black ratings") + xlab("White rating") + ylab("Black rating")
+```
+
+There seems to be somewhat of a linear relationship between the ratings, however there is a large spread and most likely the error margin is quite big. Furthermore, there are quite a few outlier relationships, however these aren't prominent enough to affect most regression models.
+
+There seems to be a high rate of both white and black 1500 rated players who are playing much further out of their rating bracket than the standard. I assume this is due to people who "know their level" and manually seek out higher rater players in order to more quickly climb the Lichess rating ranks. This pehnomenon can be spotted by the cross formed by x = 1500 and y = 1500.
+
+### Regression models
+
+#### Linear regression
+
+Since there is only one quantitative linear correlation, I will have to work with the white and black ratings relationship. I will work on the overplotting-adapted data.
+
+```{r}
 ggplot(ratings_matrix, aes(x=white_rating, y=black_rating)) + geom_point(alpha=1/4, color="royalblue4") + ggtitle("Linear relationship of ratings") + xlab("White rating") + ylab("Black rating") + geom_smooth(method="lm", formula=y~x, color="firebrick1")
 ```
+We can see that the linear regression model does not do a very good job at matching ratings, and thus would not be very suitable for any forms of interpolation or extrapolation. This is most likely due to partly the specificity of the Lichess data, that doesn't exactly map to competitive chess, but also due to the complexity of the rating model itself.
+
+In fact, as the higher one ranks on the Glicko scale, the harder it is to progress further up, and the easier it is to fall down, even simply drawing a few games could result in a drastic drop in rating, while a small improvement would only result from winning a few elite level games.
+
+Due to this, I suspect that alternative regression models should be used for predicting and mapping the relationship between ratings. In fact, I would guess that a logistic regression model would do a much better job at matching the graph.
+
+#### Alternative regression models
+
+Since plotting / graphing many of these alternative models are complex and require a package cluster-mess, I will simply describe them here, and will use them more extensively when training and testing different regression models, for practical reasons.
+
+##### Boosting algorithms
+
+Boosting algorithms are a class of algorithms that can convert "weak learners" to "strong learners". In essence, if decision rules individually aren't descriptive enough to correctly predict / classify data, the set of rules is called a weak learner. A strong learner results from the combination of predictions of weak learners using methods such as the average/weighted average.
+
+###### Stochastic gradient boosting
+
+Gradient boosting algorithms consist of a loss function, a weak learner and an additive model (new regression trees are added, existing models remain unchanged). THe algorithm then tries to add trees to the weak learner while minimising the loss. The new models are then added to existing ones to correct/improve the underlying model.
+
+Stochastic gradient boosting is a variation of gradient boosting where new trees are created from subsamples of the training dataset, analogous to bagging.
+
+###### eXtreme gradient boosting
+
+Extremeness consists in more aggressive sub-sampling. For example, selecting only 50% as a subsample.
+
+##### K-nearest neighbours
+
+The k-nearest neighbors (KNN) algorithm assumes that similar things exist in close proximity. In other words, it locates and calculates the proximity between training data and new data. From those k-neighbours, in the case of regression, it returns the mean of the best matches.
+
+##### Classification and regression trees
+
+CART models function based on binary trees. Suitable points in the data are used to split the data and construct the tree which has the goal of minimising a certain cost metric/function.
+
+##### Support Vector Machines
+
+In SVM models, data items are plotted in an n-dimensional space (n is the number of features) and each value will thus be a coordinate. Then the algorithm tries to find a hyperplane (in the n-dimensional space) that separates two label classes. It is mostly used for classification, but is also becoming more popular for regression: Support Vector Regression (SVR).
 
 ## Training and testing regression models
 
@@ -283,6 +330,8 @@ brnn_mod <- train(white_rating ~ ., data=training, method="brnn")
 gbm_mod <- train(white_rating ~ ., data=training, method="gbm", trControl=tc)
 knn_mod <- train(white_rating ~ ., data=training, method="knn")
 rlm_mod <- train(white_rating ~ ., data=training, method="rlm")
+
+# Commented out trainigs cause unexpected R errors that I haven't been able to debug
 #lmt_mod <- train(white_rating ~ ., data=training, method="LMT")
 # Quantile regression neural network
 #qrnn_mod <- train(white_rating ~ ., data=training, method="qrnn")
@@ -324,8 +373,19 @@ model_metrics <- add_mm(knn_mod, "K-nearest neighbours")
 formattable(model_metrics)
 ```
 
+```{r}
+ggplot(gbm_mod) + geom_histogram()
+```
+
 ### Conclusion
 
+Rating predictions were sadly not as accurate as I had hoped, and have much less relations to other factors than I thought, but maybe that's a peculiarity of online chess platforms where everyone can play. Furthermore, a lot of the data is qualitative, which would benefit from classification analysis and not regression.
+
+However, the model does not do a terrible job either, as the rating pairings it suggests could still be played out at medium levels, although the lower rated player will have to use considerable brainpower to stand a chance.
+
+I am confident that some other machine learning models such as Logistic model trees, quantile regression or even ridge / lasso / elasticnet methods would have yielded much better results, however due to some technical issues with R that I did not manage to debug, I wasn't able to run those training models.
+
+So perhaps, with additional tuning, the linear model could be better fitted for predicting white and black ratings, however I find it unlikely that such a simple model could yield much better results, if we consider the increasing difficulty of improving one's rating at high ratings (due to how chess works), and the fact that everyone can play everyone on Lichess.
 
 ## Viking lotto
 
@@ -341,25 +401,30 @@ $$\frac{48!}{6!(48-6)!}=\frac{48!}{6!*42!}=12271512$$
 Then, to get 1 correct number out of 8, the chance is evidently 1/8. The probability of winning the jackpot is thus 1 in 98,172,096.
 $$\frac{1}{12271512}*\frac{1}{8}=98172096$$
 
-### Odds of matching 6
+### Hypergeometric distribution
 
-#### Without Viking Number
+Now using this formula will become tedious for further calculations, so we can use something called the [probability mass function](https://en.wikipedia.org/wiki/Hypergeometric_distribution).
 
-1 in 12,271,512
+$$\frac{{k \choose x}{n - k \choose k-x}}{{n \choose k}}$$
+Where $n$ is the amount of possible numbers, $k$ is the number of required slots and $x$ is the number of matched numbers (observed success).
 
-#### With Viking Number (guess 5 + Viking Number):
+The reasoning behind this is that ${n \choose k}$ represents the total combinations, ${k \choose b}$ represents the number of winning combinations. Finally, what remains has the purpose of selecting the remaining losing numbers, thus providing the last piece of information needed to complete the combinatorial identity.
 
-$$\frac{48!}{5!(48-5)!}=\frac{48!}{5!*43!}=1712304$$
+#### Function
 
-Probability of the non-guessed number being 8 or smaller:
-$$\frac{9-1}{48}=\frac{8}{48}=\frac{1}{6}$$
+Let's write such a function:
 
+```{r}
+dist <- function(totalNr, totalSlots, matchCount) {
+  num <- choose(totalSlots, matchCount) * choose(totalNr - totalSlots, totalSlots - matchCount)
+  denom <- choose(totalNr, totalSlots)
+  num / denom
+}
 
+dist(48, 6, 6)
+```
 
-### Odds of matching 5 + Viking Number
-
-$$\frac{48!}{5!(48-5)!}=\frac{48!}{5!*43!}=1 712 304$$
-$$\frac{1}{1 712 304}*\frac{1}{8}=$$
+#### Results
 
 ### Conclusion
 
