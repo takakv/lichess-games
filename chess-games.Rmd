@@ -321,15 +321,15 @@ I will be using k-fold cross validation method when training my models, which in
 ```{r include=FALSE}
 tc <- trainControl(method="cv", number=10)
 set.seed(123)
-lm_mod <- train(white_rating ~ ., data=training, method="lm", trControl=tc)
-cart_mod <- train(white_rating ~ ., data=training, method="rpart")
 
-#glm_mod <- train(white_rating ~ ., data=training, method="randomGLM")
-ext_mod <- train(white_rating ~ ., data=training, method="xgbLinear")
-brnn_mod <- train(white_rating ~ ., data=training, method="brnn")
+lm_mod <- train(white_rating ~ ., data=training, method="lm", trControl=tc)
+cart_mod <- train(white_rating ~ ., data=training, method="rpart", trControl=tc)
+ext_mod <- train(white_rating ~ ., data=training, method="xgbLinear", trControl=tc)
+brnn_mod <- train(white_rating ~ ., data=training, method="brnn", trControl=tc)
 gbm_mod <- train(white_rating ~ ., data=training, method="gbm", trControl=tc)
-knn_mod <- train(white_rating ~ ., data=training, method="knn")
-rlm_mod <- train(white_rating ~ ., data=training, method="rlm")
+knn_mod <- train(white_rating ~ ., data=training, method="knn", trControl=tc)
+rlm_mod <- train(white_rating ~ ., data=training, method="rlm", trControl=tc)
+#glm_mod <- train(white_rating ~ ., data=training, method="randomGLM")
 
 # Commented out trainigs cause unexpected R errors that I haven't been able to debug
 #lmt_mod <- train(white_rating ~ ., data=training, method="LMT")
@@ -361,21 +361,27 @@ add_mm <- function(x, y) {
 
 
 model_metrics <- add_mm(lm_mod, "Linear regression model")
-#model_metrics <- add_mm(glm_mod, "Generalised linear regression model")
 model_metrics <- add_mm(brnn_mod, "Bayesian regularised neural networks")
 model_metrics <- add_mm(ext_mod, "eXtreme gradient boosting")
 model_metrics <- add_mm(cart_mod, "CART")
 model_metrics <- add_mm(gbm_mod, "Stochastic gradient boosting")
 model_metrics <- add_mm(knn_mod, "K-nearest neighbours")
+#model_metrics <- add_mm(glm_mod, "Generalised linear regression model")
 #model_metrics <- add_mm(lmt_mod,  "Robust linear model")
 #model_metrics <- add_mm(rlog_mod, "Logistic model trees")
 
 formattable(model_metrics)
 ```
 
-```{r}
-ggplot(gbm_mod) + geom_histogram()
-```
+How to read the metrics:
+
+- R2: the higher the better (0-1)
+- RMSE: the lower the better (0-inf, interpret on scale)
+- MAE: the lower the better (0-inf, interpret on scale)
+- MAPE: the lower the better (0-1)
+- MSE: the lower the better, quite bad in all cases here
+
+We can see that the best model seems to be ...
 
 ### Conclusion
 
