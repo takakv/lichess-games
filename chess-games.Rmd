@@ -462,7 +462,11 @@ dist <- function(totalNr, totalSlots, matchCount) {
   denom <- choose(totalNr, totalSlots)
   num / denom
 }
+```
 
+#### Results
+
+```{r}
 add_odd <- function(x, y) {
   dig <- 2
   odd_counts %>% add_row("Numbers matched" = paste("Match ", x, " + ", y), "Probability of winning" = dist(48, 6, x) * dist(8, 1, y))
@@ -483,8 +487,6 @@ odd_counts <- add_odd(3, 0)
 
 formattable(odd_counts)
 ```
-
-#### Results
 
 ### Conclusion
 
