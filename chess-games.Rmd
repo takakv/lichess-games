@@ -325,3 +325,42 @@ formattable(model_metrics)
 ```
 
 ### Conclusion
+
+
+## Viking lotto
+
+Viking Lotto was Europe's first multi-national lottery established in 1993. As of 2017, there are 9 countries participating: Denmark, Finland, Iceland, Norway, Sweden, Estonia, Latvia, Lithuania and Slovenia. Jackpots start at €3 million and can grow up to €35 million. Any more than that, and the surplus goes to lower tier prizes. Hence, there are other prizes other than the big jackpot too, but the rules and prizes vary depending on the country where the lottery is played, so the jackpot is the only steady goal. The numbers are drawn every Wednesday.
+
+The player has to select six numbers from 1-48 and one "Viking" number from 1 to 8. To win the jackpot, all seven numbers must be matched to the lottery numbers.
+
+### Odds of winning the jackpot | match 6 + Viking Number
+
+First, the player needs to get 6 correct numbers out of 48. There is a chance of 1 in 12,271,512 to do this:
+$$\frac{48!}{6!(48-6)!}=\frac{48!}{6!*42!}=12271512$$
+
+Then, to get 1 correct number out of 8, the chance is evidently 1/8. The probability of winning the jackpot is thus 1 in 98,172,096.
+$$\frac{1}{12271512}*\frac{1}{8}=98172096$$
+
+### Odds of matching 6
+
+#### Without Viking Number
+
+1 in 12,271,512
+
+#### With Viking Number (guess 5 + Viking Number):
+
+$$\frac{48!}{5!(48-5)!}=\frac{48!}{5!*43!}=1712304$$
+
+Probability of the non-guessed number being 8 or smaller:
+$$\frac{9-1}{48}=\frac{8}{48}=\frac{1}{6}$$
+
+
+
+### Odds of matching 5 + Viking Number
+
+$$\frac{48!}{5!(48-5)!}=\frac{48!}{5!*43!}=1 712 304$$
+$$\frac{1}{1 712 304}*\frac{1}{8}=$$
+
+### Conclusion
+
+It is wise not to play lottery at all. If you do however, pick a lottery with better odds and bigger gains such as EuroJackpot, with a jackpot chance of 1 in 95,344,200. Why do people even play Viking Lotto?
