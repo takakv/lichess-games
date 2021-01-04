@@ -291,6 +291,8 @@ It isn't perfect yet but it seems to fit better. We can see that the curve is sl
 ggplot(ratings_matrix, aes(x=white_rating, y=black_rating)) + geom_point(alpha=1/4, color="royalblue4") + ggtitle("Logistic regression model") + xlab("White rating") + ylab("Black rating") + geom_smooth(method="glm", formula=y~x, color="firebrick1", method.args=list(family="binomial"))
 ```
 
+NOTICE: So there is no model drawn on it? Why? Because R won't accept the "binomial" parameter for my data set.
+
 Now I truly believe this model would be quite a nice fit, however I simply cannot seem to find a way to debug the R error that causes the regression computation to fail. This issue is present also later in the training phase. No solutions from the web have helped.
 
 #### Alternative regression models
@@ -344,7 +346,7 @@ testing <- relevant_data[-sample,]
 
 I will be using k-fold cross validation method when training my models, which involves splitting the dataset into k-subsets called folds. All k-1 folds will then be trained/analysed and the analysis is then validated on the remaining subset. This process is repeated until each fold has been a test subset, and the overall prediction accuracy can then be estimated by computing the average of the k recorded errors.
 
-```{r include=FALSE}
+```{r message=FALSE, warning=FALSE}
 tc <- trainControl(method="cv", number=10)
 set.seed(123)
 
@@ -356,9 +358,9 @@ brnn_mod <- train(white_rating ~ ., data=training, method="brnn", trControl=tc)
 gbm_mod <- train(white_rating ~ ., data=training, method="gbm", trControl=tc)
 knn_mod <- train(white_rating ~ ., data=training, method="knn", trControl=tc)
 rlm_mod <- train(white_rating ~ ., data=training, method="rlm", trControl=tc)
-#glm_mod <- train(white_rating ~ ., data=training, method="randomGLM")
 
 # Commented out trainings that caused unexpected R errors that I haven't been able to debug
+#glm_mod <- train(white_rating ~ ., data=training, method="randomGLM")
 #lmt_mod <- train(white_rating ~ ., data=training, method="LMT")
 # Quantile regression neural network
 #qrnn_mod <- train(white_rating ~ ., data=training, method="qrnn")
